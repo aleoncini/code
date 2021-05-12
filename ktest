@@ -1,0 +1,40 @@
+#!/bin/bash
+
+export TKN=$(curl --insecure -X POST 'https://access-sso.apps.ocp4.rhocplab.com/auth/realms/coders/protocol/openid-connect/token' \
+ --user be_service:c1b34059-c70c-42a3-acee-fd749e59e02e \
+ -H "Content-Type: application/x-www-form-urlencoded" \
+ -d "username=andrea" \
+ -d 'password=password' \
+ -d 'grant_type=password' \
+ -d 'client_id=code' | jq -r '.access_token')
+
+echo $TKN
+
+export USR=$(curl -X GET "https://access-sso.apps.ocp4.rhocplab.com/auth/admin/realms/sole24/users/?username=$1" \
+-H "Accept: application/json" \
+-H "Authorization: Bearer $TKN" | jq .[0] )
+
+echo $TKN
+
+USER_ID=$(echo $USR | jq -r .id)
+USER_NM=$(echo $USR | jq .username)
+LOGINS=$(echo $USR | jq .attributes.loginNumber[0])
+
+if [ -z "$2" ]
+  then
+    printf "\n\n \
+           username: $USER_NM\n \
+                 id: $USER_ID\n \
+       total logins: $LOGINS\n\n"
+  else
+    curl -X PUT "https://access-sso.apps.ocp4.rhocplab.com/auth/admin/realms/sole24/users/$USER_ID" \
+      -H "Accept: application/json" \
+      -H "Authorization: Bearer $TKN" \
+      -H "content-type: application/json" \
+      -d "{\"attributes\":{\"loginNumber\":[\"$2\"]}}"
+
+    printf "\n\n \
+           username: $USER_NM\n \
+       total logins: 0\n\n"
+        
+fi
